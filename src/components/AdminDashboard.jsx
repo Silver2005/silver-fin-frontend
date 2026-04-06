@@ -1,38 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../api/axios'; // On utilise notre instance configurée
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Utilisation de useCallback pour stabiliser la fonction
     const fetchAdminStats = useCallback(async () => {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-            setError("Session expirée. Veuillez vous reconnecter.");
-            setLoading(false);
-            return;
-        }
-
         try {
             setLoading(true);
-            setError(null); // Réinitialise l'erreur avant de tenter l'appel
+            setError(null);
             
-            const res = await axios.get('http://127.0.0.1:8000/api/admin/stats', {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            });
+            // L'URL est maintenant relative grâce à baseURL dans axios.js
+            const res = await api.get('/admin/stats'); 
 
             setStats(res.data);
         } catch (err) {
             console.error("Erreur Admin API:", err);
-            // On récupère le message d'erreur du backend s'il existe
             const message = err.response?.data?.message || "Connexion au serveur impossible.";
             setError(message);
+            
+            // Si c'est une erreur 401 (non autorisé), on peut rediriger
+            if (err.response?.status === 401) {
+                setError("Session expirée. Veuillez vous reconnecter.");
+            }
         } finally {
             setLoading(false);
         }
@@ -80,7 +71,7 @@ const AdminDashboard = () => {
                     <div className="flex items-center mt-2 space-x-2">
                         <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                         <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                            Système : <span className="text-slate-900">{stats.system_status}</span>
+                            Système : <span className="text-slate-900">{stats?.system_status || 'Actif'}</span>
                         </p>
                     </div>
                 </div>
@@ -95,10 +86,10 @@ const AdminDashboard = () => {
 
             {/* GRILLE DE STATS PRINCIPALES */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Utilisateurs" value={stats.total_users} icon="👥" color="bg-blue-50 text-blue-600" />
-                <StatCard title="Transactions" value={stats.total_transactions} icon="📝" color="bg-purple-50 text-purple-600" />
-                <StatCard title="Dettes" value={stats.total_debts} icon="⏳" color="bg-orange-50 text-orange-600" />
-                <StatCard title="Volume Global" value={`${Number(stats.total_volume).toLocaleString()} FCFA`} icon="💰" color="bg-emerald-50 text-emerald-600" />
+                <StatCard title="Utilisateurs" value={stats?.total_users} icon="👥" color="bg-blue-50 text-blue-600" />
+                <StatCard title="Transactions" value={stats?.total_transactions} icon="📝" color="bg-purple-50 text-purple-600" />
+                <StatCard title="Dettes" value={stats?.total_debts} icon="⏳" color="bg-orange-50 text-orange-600" />
+                <StatCard title="Volume Global" value={`${Number(stats?.total_volume || 0).toLocaleString()} FCFA`} icon="💰" color="bg-emerald-50 text-emerald-600" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -118,7 +109,7 @@ const AdminDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {stats.recent_users.map((u, i) => (
+                                {stats?.recent_users?.map((u, i) => (
                                     <tr key={i} className="group hover:bg-slate-50 transition-colors">
                                         <td className="py-4 pl-2 font-black text-slate-900 text-sm">{u.name}</td>
                                         <td className="py-4 text-slate-500 text-xs font-medium">{u.email}</td>
@@ -138,11 +129,11 @@ const AdminDashboard = () => {
                     <div className="space-y-6">
                         <div className="flex justify-between items-center border-b border-white/5 pb-4">
                             <span className="text-slate-500 text-[10px] font-black uppercase">Heure Locale</span>
-                            <span className="text-xs font-mono font-bold">{stats.server_time.split(' ')[1]}</span>
+                            <span className="text-xs font-mono font-bold">{stats?.server_time?.split(' ')[1] || '--:--'}</span>
                         </div>
                         <div className="flex justify-between items-center border-b border-white/5 pb-4">
                             <span className="text-slate-500 text-[10px] font-black uppercase">ID Administrateur</span>
-                            <span className="text-[10px] font-mono text-blue-400 truncate ml-4">{stats.admin_identity}</span>
+                            <span className="text-[10px] font-mono text-blue-400 truncate ml-4">{stats?.admin_identity || 'ID_SECURE'}</span>
                         </div>
                         <div className="flex justify-between items-center border-b border-white/5 pb-4">
                             <span className="text-slate-500 text-[10px] font-black uppercase">Version API</span>
@@ -153,7 +144,7 @@ const AdminDashboard = () => {
                             <div className="text-center">
                                 <p className="text-[9px] text-blue-100 font-black uppercase tracking-widest mb-1">Protection Active</p>
                                 <p className="text-xs text-white font-medium leading-relaxed">
-                                    Toutes les données sont chiffrées de bout en bout via AES-256.
+                                    Données chiffrées AES-256 en transit.
                                 </p>
                             </div>
                         </div>
@@ -170,7 +161,7 @@ const StatCard = ({ title, value, icon, color }) => (
             {icon}
         </div>
         <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">{title}</p>
-        <p className="text-2xl font-black text-slate-900 mt-1 tracking-tight">{value}</p>
+        <p className="text-2xl font-black text-slate-900 mt-1 tracking-tight">{value || 0}</p>
     </div>
 );
 

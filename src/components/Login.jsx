@@ -6,42 +6,55 @@ const Login = ({ setToken, setUser, togglePage }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        
+        // Initialisation
         setError(''); 
+        setIsLoading(true);
+
         try {
             const response = await axios.post('http://127.0.0.1:8000/api/login', {
                 email,
                 password
             });
 
-            // DEBUG : Vérifie ici si 'role' apparaît bien dans la console (F12)
+            // DEBUG : Utile pour vérifier la structure (token, user, role)
             console.log("Réponse Backend :", response.data);
 
-            // 1. Stockage du token
+            // 1. Stockage persistant du token
             localStorage.setItem('token', response.data.token);
             
-            // 2. Mise à jour de l'utilisateur (AVANT le token pour préparer la redirection)
+            // 2. Mise à jour de l'état utilisateur (pour le contexte global)
             if (response.data.user) {
                 setUser(response.data.user);
+                // Optionnel : stocker l'utilisateur si nécessaire au rafraîchissement
+                // localStorage.setItem('user', JSON.stringify(response.data.user));
             }
             
             // 3. Déclenchement du changement d'interface dans App.js
+            // On le fait en dernier pour s'assurer que les données sont prêtes
             setToken(response.data.token);
 
         } catch (err) {
             console.error("Erreur login:", err);
-            setError("Email ou mot de passe incorrect.");
+            // Gestion d'erreur plus précise selon la réponse du serveur
+            const message = err.response?.data?.message || "Email ou mot de passe incorrect.";
+            setError(message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-900 px-4 font-sans">
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100">
+        <div className="flex items-center justify-center min-h-screen bg-slate-900 px-4 font-sans selection:bg-blue-100">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100 animate-fadeIn">
+                
                 {/* Logo Section */}
                 <div className="flex justify-center mb-6">
-                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black italic text-xl shadow-lg shadow-blue-200 animate-pulse">
+                    <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black italic text-2xl shadow-xl shadow-blue-200">
                         S
                     </div>
                 </div>
@@ -49,32 +62,34 @@ const Login = ({ setToken, setUser, togglePage }) => {
                 <h2 className="text-3xl font-black text-center mb-2 text-slate-900 tracking-tighter uppercase">
                     SILVER <span className="text-blue-600">FIN</span>
                 </h2>
-                <p className="text-center text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">Accès Sécurisé</p>
+                <p className="text-center text-slate-400 text-[9px] font-black mb-8 uppercase tracking-[0.3em]">Système de Gestion Financière</p>
                 
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-4 rounded-2xl mb-6 text-center font-bold text-[10px] uppercase tracking-wider border border-red-100 animate-shake">
+                    <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl mb-6 text-center font-bold text-[10px] uppercase tracking-wider border border-rose-100 animate-bounce">
                         ⚠️ {error}
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Professionnel</label>
+                <form onSubmit={handleLogin} className="space-y-5">
+                    <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identifiant Email</label>
                         <input 
                             type="email" 
-                            className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:border-blue-600 focus:bg-white outline-none transition-all font-bold text-slate-900"
-                            placeholder="votre@email.com"
+                            disabled={isLoading}
+                            className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:border-blue-600 focus:bg-white outline-none transition-all font-bold text-slate-900 disabled:opacity-50"
+                            placeholder="nom@entreprise.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
                     </div>
 
-                    <div className="relative">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Mot de passe</label>
+                    <div className="relative space-y-2">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mot de passe</label>
                         <input 
                             type={showPassword ? "text" : "password"} 
-                            className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:border-blue-600 focus:bg-white outline-none transition-all font-bold text-slate-900"
+                            disabled={isLoading}
+                            className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:border-blue-600 focus:bg-white outline-none transition-all font-bold text-slate-900 disabled:opacity-50"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -89,17 +104,30 @@ const Login = ({ setToken, setUser, togglePage }) => {
                         </button>
                     </div>
 
-                    <button type="submit" className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all active:scale-95 text-xs mt-4">
-                        Entrer dans le système
+                    <button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className={`w-full p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 text-[10px] mt-4 flex items-center justify-center gap-3
+                            ${isLoading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-blue-600 text-white'}`}
+                    >
+                        {isLoading ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                Authentification...
+                            </>
+                        ) : (
+                            "Accéder au tableau de bord"
+                        )}
                     </button>
                 </form>
 
-                <div className="mt-8 text-center pt-6 border-t border-slate-50">
+                <div className="mt-10 text-center pt-6 border-t border-slate-50">
                     <button 
                         onClick={togglePage} 
-                        className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"
+                        disabled={isLoading}
+                        className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors disabled:opacity-50"
                     >
-                        Pas encore de compte ? S'inscrire
+                        Nouveau ici ? <span className="text-blue-600">Créer un compte</span>
                     </button>
                 </div>
             </div>

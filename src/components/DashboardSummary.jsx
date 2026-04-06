@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api/axios'; // Utilisation de l'instance centralisée
 import {
     Chart as ChartJS,
     ArcElement,
@@ -43,13 +43,10 @@ const DashboardSummary = ({ onGoToAdd }) => {
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
         try {
-            const response = await axios.get('http://127.0.0.1:8000/api/transactions/summary', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            setLoading(true);
+            // L'URL est simplifiée, le token est géré par l'intercepteur
+            const response = await api.get('/transactions/summary');
 
             const { revenues, expenses, recent_transactions } = response.data;
             const rev = parseFloat(revenues) || 0;
@@ -101,7 +98,10 @@ const DashboardSummary = ({ onGoToAdd }) => {
                 sante_financiere: sante
             });
         } catch (error) {
-            console.error("Erreur API:", error);
+            console.error("Erreur API Dashboard:", error);
+            if (error.response?.status === 401) {
+                // Optionnel : rediriger vers login si non autorisé
+            }
         } finally {
             setLoading(false);
         }
@@ -113,11 +113,8 @@ const DashboardSummary = ({ onGoToAdd }) => {
 
     const handleDelete = async (id) => {
         if (!window.confirm("Supprimer cette opération ?")) return;
-        const token = localStorage.getItem('token');
         try {
-            await axios.delete(`http://127.0.0.1:8000/api/transactions/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/transactions/${id}`);
             fetchData();
         } catch (error) {
             alert("Erreur lors de la suppression");
@@ -150,26 +147,27 @@ const DashboardSummary = ({ onGoToAdd }) => {
     };
 
     if (loading) return (
-        <div className="p-20 text-center font-black text-slate-300 animate-pulse uppercase tracking-[0.3em]">
-            Silver Fin...
+        <div className="flex flex-col items-center justify-center py-40 space-y-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Calcul des flux financiers...</p>
         </div>
     );
 
     return (
-        <div className="space-y-8 animate-fadeIn">
+        <div className="space-y-8 animate-reveal">
             
-            {/* HEADER - Épuré et Professionnel */}
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 gap-4">
+            {/* HEADER */}
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-[2.2rem] shadow-sm border border-slate-100 gap-4">
                 <div>
-                    <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                         Dashboard <span className="text-blue-600">SILVER</span>
                     </h2>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Gestion de Trésorerie & Analyse</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Analyse & Trésorerie</p>
                 </div>
                 
                 <button 
                     onClick={onGoToAdd}
-                    className="w-full sm:w-auto bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl active:scale-95"
+                    className="w-full sm:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95"
                 >
                     + Nouvelle Opération
                 </button>
@@ -177,42 +175,36 @@ const DashboardSummary = ({ onGoToAdd }) => {
             
             {/* RÉSUMÉ DES SOLDES */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                    <p className="text-[10px] text-gray-400 uppercase font-black mb-2 tracking-widest">Total Revenus</p>
-                    <p className="text-2xl font-black text-emerald-600">{summary.total_revenu.toLocaleString()} F</p>
-                </div>
-                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                    <p className="text-[10px] text-gray-400 uppercase font-black mb-2 tracking-widest">Total Dépenses</p>
-                    <p className="text-2xl font-black text-rose-600">{summary.total_depense.toLocaleString()} F</p>
-                </div>
-                <div className="bg-blue-600 p-6 rounded-[2rem] shadow-xl shadow-blue-100 text-white">
-                    <p className="text-[10px] uppercase font-black mb-2 opacity-80 tracking-widest">Solde Actuel</p>
-                    <p className="text-2xl font-black">{summary.solde.toLocaleString()} F</p>
+                <SummaryCard title="Revenus" value={summary.total_revenu} color="text-emerald-600" />
+                <SummaryCard title="Dépenses" value={summary.total_depense} color="text-rose-600" />
+                <div className="bg-blue-600 p-8 rounded-[2.2rem] shadow-xl shadow-blue-100 text-white">
+                    <p className="text-[10px] uppercase font-black mb-2 opacity-70 tracking-widest">Solde Net</p>
+                    <p className="text-3xl font-black tracking-tight">{summary.solde.toLocaleString()} F</p>
                 </div>
             </div>
 
             {/* GRAPHIQUES */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-center">
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-6 tracking-widest">Répartition Flux</h3>
-                    <div className="w-full h-48">
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase mb-8 tracking-widest text-center">Répartition</h3>
+                    <div className="w-full h-48 mb-8">
                         <Doughnut data={doughnutData} options={{ plugins: { legend: { display: false } } }} />
                     </div>
-                    <div className="mt-6 flex flex-col w-full gap-2">
-                        <div className="flex justify-between items-center text-[10px] font-black bg-emerald-50 text-emerald-700 p-3 rounded-2xl">
-                            <span>REVENUS</span>
+                    <div className="space-y-2">
+                        <div className="flex justify-between p-3 rounded-xl bg-emerald-50 text-[10px] font-black text-emerald-700 uppercase">
+                            <span>Entrées</span>
                             <span>{summary.total_revenu.toLocaleString()} F</span>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] font-black bg-rose-50 text-rose-700 p-3 rounded-2xl">
-                            <span>DÉPENSES</span>
+                        <div className="flex justify-between p-3 rounded-xl bg-rose-50 text-[10px] font-black text-rose-700 uppercase">
+                            <span>Sorties</span>
                             <span>{summary.total_depense.toLocaleString()} F</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-6 tracking-widest">Évolution du Solde</h3>
-                    <div className="h-56">
+                <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase mb-8 tracking-widest">Performance du Solde</h3>
+                    <div className="h-64">
                         <Line 
                             data={lineData} 
                             options={{ 
@@ -229,64 +221,65 @@ const DashboardSummary = ({ onGoToAdd }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
                 <div className={`p-8 rounded-[2.5rem] border-2 flex flex-col justify-between transition-all duration-500 ${summary.sante_financiere.color}`}>
                     <div>
-                        <div className="flex items-center gap-3 mb-4">
-                            <span className="text-2xl">{summary.sante_financiere.alerte ? '⚠️' : '💡'}</span>
+                        <div className="flex items-center gap-3 mb-6">
+                            <span className="text-2xl">{summary.sante_financiere.alerte ? '⚠️' : '🛡️'}</span>
                             <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">{summary.sante_financiere.titre}</h3>
                         </div>
-                        <p className="text-sm font-bold leading-relaxed italic">
-                            "{summary.sante_financiere.conseil}"
+                        <p className="text-base font-bold leading-relaxed mb-10">
+                            {summary.sante_financiere.conseil}
                         </p>
                     </div>
-                    <div className="mt-8 space-y-3">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                            <span>Taux de consommation</span>
-                            <span className={summary.sante_financiere.alerte ? 'text-rose-600' : 'text-emerald-600'}>
-                                {summary.ratio_depense}%
-                            </span>
+                    <div>
+                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-3">
+                            <span>Taux d'utilisation</span>
+                            <span>{summary.ratio_depense}%</span>
                         </div>
-                        <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
+                        <div className="h-3 bg-white/50 rounded-full overflow-hidden">
                             <div 
                                 style={{ width: `${Math.min(summary.ratio_depense, 100)}%` }}
-                                className={`h-full transition-all duration-[1500ms] ease-out ${summary.ratio_depense > 75 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                className={`h-full transition-all duration-[2000ms] ${summary.ratio_depense > 75 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                             ></div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-50 flex justify-between items-center text-slate-800">
-                        <h3 className="font-black uppercase text-[10px] tracking-widest">Dernières Activités</h3>
-                        <span className="text-[9px] font-bold text-gray-300 uppercase">Historique</span>
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col">
+                    <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                        <h3 className="font-black uppercase text-[10px] tracking-widest text-slate-900">Mouvements récents</h3>
+                        <button onClick={fetchData} className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">Refresh</button>
                     </div>
-                    <div className="divide-y divide-gray-50 max-h-[300px] overflow-y-auto custom-scrollbar">
-                        {summary.recent_transactions.length > 0 ? (
-                            summary.recent_transactions.map((t) => (
-                                <div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-all group">
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black ${t.type === 'revenu' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                            {t.type === 'revenu' ? '↑' : '↓'}
-                                        </div>
-                                        <div>
-                                            <p className="font-black text-slate-800 text-xs uppercase tracking-tighter">{t.description || "Opération"}</p>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase">{new Date(t.transaction_date).toLocaleDateString()}</p>
-                                        </div>
+                    <div className="divide-y divide-slate-50 max-h-[350px] overflow-y-auto custom-scrollbar">
+                        {summary.recent_transactions.map((t) => (
+                            <div key={t.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-all group">
+                                <div className="flex items-center space-x-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs ${t.type === 'revenu' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                        {t.type === 'revenu' ? '↑' : '↓'}
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className={`font-black text-xs ${t.type === 'revenu' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                            {t.type === 'revenu' ? '+' : '-'} {parseFloat(t.amount).toLocaleString()} F
-                                        </span>
-                                        <button onClick={() => handleDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-rose-500 transition-all">🗑️</button>
+                                    <div>
+                                        <p className="font-black text-slate-900 text-xs uppercase tracking-tighter">{t.description || "Opération"}</p>
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{new Date(t.transaction_date).toLocaleDateString()}</p>
                                     </div>
                                 </div>
-                            ))
-                        ) : (
-                            <p className="p-10 text-center text-[10px] font-bold text-gray-300 uppercase">Aucune activité récente</p>
-                        )}
+                                <div className="flex items-center gap-4">
+                                    <span className={`font-black text-xs ${t.type === 'revenu' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {t.type === 'revenu' ? '+' : '-'} {parseFloat(t.amount).toLocaleString()} F
+                                    </span>
+                                    <button onClick={() => handleDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all">🗑️</button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
+const SummaryCard = ({ title, value, color }) => (
+    <div className="bg-white p-8 rounded-[2.2rem] shadow-sm border border-slate-100 hover:border-blue-100 transition-colors">
+        <p className="text-[10px] text-slate-400 uppercase font-black mb-2 tracking-widest">{title}</p>
+        <p className={`text-2xl font-black ${color}`}>{value.toLocaleString()} F</p>
+    </div>
+);
 
 export default DashboardSummary;

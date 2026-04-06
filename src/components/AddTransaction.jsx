@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios'; // On utilise l'instance centralisée
 
-// Ajout de la prop onTransactionAdded
 const AddTransaction = ({ onTransactionAdded }) => { 
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,19 +12,12 @@ const AddTransaction = ({ onTransactionAdded }) => {
         transaction_date: new Date().toISOString().split('T')[0]
     });
 
-    // 1. Charger les catégories (Ton code existant est parfait)
+    // 1. Charger les catégories via l'instance API
     useEffect(() => {
         const fetchCategories = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-
             try {
-                const res = await axios.get('http://127.0.0.1:8000/api/categories', {
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                });
+                // L'URL est simplifiée, le token est ajouté par l'intercepteur
+                const res = await api.get('/categories');
                 const dataReceived = Array.isArray(res.data) ? res.data : (res.data.data || []);
                 setCategories(dataReceived);
             } catch (err) {
@@ -40,7 +32,6 @@ const AddTransaction = ({ onTransactionAdded }) => {
     // 2. Envoyer les données
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('token');
 
         if (!formData.category_id) {
             alert("⚠️ Veuillez choisir une catégorie.");
@@ -48,20 +39,15 @@ const AddTransaction = ({ onTransactionAdded }) => {
         }
 
         try {
-            await axios.post('http://127.0.0.1:8000/api/transactions', formData, {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            });
+            // Appel simplifié à l'API
+            await api.post('/transactions', formData);
             
             alert("✅ Opération enregistrée !");
 
-            // --- ÉTAPE CRUCIALE POUR LE DASHBOARD ---
+            // Rafraîchissement du Dashboard
             if (onTransactionAdded) {
-                onTransactionAdded(); // On dit au Dashboard de se rafraîchir
+                onTransactionAdded(); 
             }
-            // ----------------------------------------
             
             // Réinitialisation du formulaire
             setFormData({
@@ -79,26 +65,26 @@ const AddTransaction = ({ onTransactionAdded }) => {
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-            {/* ... Tout le reste de ton JSX (formulaire, boutons, etc.) reste identique ... */}
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                <span className="bg-blue-500 w-2 h-6 rounded-full mr-2"></span>
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center uppercase tracking-tight">
+                <span className="bg-blue-600 w-2 h-6 rounded-full mr-3"></span>
                 Nouvelle Opération
             </h3>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {/* SÉLECTEUR DE TYPE */}
                 <div className="grid grid-cols-2 gap-4">
                     <button 
                         type="button"
                         onClick={() => setFormData({...formData, type: 'revenu', category_id: ''})}
-                        className={`p-3 rounded-xl font-bold border-2 transition-all ${formData.type === 'revenu' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+                        className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 transition-all ${formData.type === 'revenu' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-transparent text-slate-400'}`}
                     >
                         💰 Entrée
                     </button>
                     <button 
                         type="button"
                         onClick={() => setFormData({...formData, type: 'depense', category_id: ''})}
-                        className={`p-3 rounded-xl font-bold border-2 transition-all ${formData.type === 'depense' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+                        className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 transition-all ${formData.type === 'depense' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-slate-50 border-transparent text-slate-400'}`}
                     >
                         🛒 Sortie
                     </button>
@@ -106,14 +92,14 @@ const AddTransaction = ({ onTransactionAdded }) => {
 
                 {/* SÉLECTEUR DE CATÉGORIE */}
                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Catégorie</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie</label>
                     <select 
-                        className="w-full p-3 mt-1 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        className="w-full p-4 mt-2 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none bg-slate-50 font-bold text-slate-700 appearance-none"
                         value={formData.category_id}
                         onChange={(e) => setFormData({...formData, category_id: e.target.value})}
                         required
                     >
-                        <option value="">-- Choisir --</option>
+                        <option value="">-- Sélectionner --</option>
                         {categories
                             .filter(c => c.type === formData.type)
                             .map(cat => (
@@ -123,37 +109,49 @@ const AddTransaction = ({ onTransactionAdded }) => {
                     </select>
                 </div>
 
+                {/* MONTANT ET DATE */}
                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Montant</label>
+                        <input 
+                            type="number" 
+                            placeholder="0.00"
+                            className="w-full p-4 mt-2 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                        <input 
+                            type="date" 
+                            className="w-full p-4 mt-2 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
+                            value={formData.transaction_date}
+                            onChange={(e) => setFormData({...formData, transaction_date: e.target.value})}
+                            required
+                        />
+                    </div>
+                </div>
+
+                {/* DESCRIPTION */}
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Désignation</label>
                     <input 
-                        type="number" 
-                        placeholder="Montant"
-                        className="p-3 border border-gray-200 rounded-xl outline-none"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                        required
-                    />
-                    <input 
-                        type="date" 
-                        className="p-3 border border-gray-200 rounded-xl outline-none"
-                        value={formData.transaction_date}
-                        onChange={(e) => setFormData({...formData, transaction_date: e.target.value})}
-                        required
+                        type="text" 
+                        placeholder="Ex: Salaire, Loyer..." 
+                        className="w-full p-4 mt-2 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
                     />
                 </div>
 
-                <input 
-                    type="text" 
-                    placeholder="Désignation" 
-                    className="w-full p-3 border border-gray-200 rounded-xl outline-none"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                />
-
                 <button 
                     type="submit" 
-                    className="w-full bg-slate-900 text-white p-4 rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg active:scale-95"
+                    disabled={loading}
+                    className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-blue-600 transition-all shadow-lg active:scale-95 disabled:opacity-50"
                 >
-                    ENREGISTRER
+                    {loading ? 'Chargement...' : 'Enregistrer l\'opération'}
                 </button>
             </form>
         </div>
