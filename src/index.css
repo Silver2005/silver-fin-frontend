@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* On définit tes couleurs personnalisées directement ici pour la v4 */
+@theme {
+  --color-silver-primary: #1e293b;
+  --color-silver-accent: #10b981;
+}
+
+/* Optionnel : Un petit lissage pour que ça fasse pro */
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}

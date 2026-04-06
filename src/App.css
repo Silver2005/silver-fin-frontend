@@ -1,0 +1,202 @@
+/* Variables SILVER FIN - Palette moderne et dynamique */
+:root {
+  --accent: #3b82f6; 
+  --accent-hover: #2563eb;
+  --accent-bg: rgba(59, 130, 246, 0.08);
+  --border: #f1f5f9; /* Plus doux que e2e8f0 pour un look Apple */
+  --text-h: #0f172a;
+  --text-p: #64748b;
+  --social-bg: #f8fafc;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+  --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 1. Bouton Compteur / CTA Secondaire */
+.counter {
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 12px; /* Plus arrondi pour le côté convivial */
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid transparent; /* Bordure plus fine */
+  transition: var(--transition);
+  margin-bottom: 24px;
+  cursor: pointer;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.counter:hover {
+  background: var(--accent);
+  color: var(--white);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+}
+
+.counter:active {
+  transform: scale(0.95);
+}
+
+/* 2. Section Hero (Effets 3D Silver Fin) */
+.hero {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1000px; /* Ajout de perspective au parent */
+}
+
+.hero .base {
+  width: 200px; /* Un peu plus grand */
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 20px 30px rgba(0,0,0,0.1));
+  transition: var(--transition);
+}
+
+/* Animation de flottement pour l'élément central */
+.hero:hover .base {
+  transform: translateY(-10px) rotateX(5deg);
+}
+
+.hero .framework,
+.hero .vite {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  transition: var(--transition);
+}
+
+.hero .framework {
+  top: 10%;
+  height: 40px;
+  /* Correction transformation pour un look "Isométrique" plus propre */
+  transform: rotateZ(-15deg) translateY(0);
+  filter: drop-shadow(0 10px 15px rgba(59, 130, 246, 0.4));
+  animation: float 4s ease-in-out infinite;
+}
+
+.hero .vite {
+  bottom: 15%;
+  right: 20%;
+  height: 35px;
+  animation: float 4s ease-in-out infinite reverse;
+}
+
+/* 3. Conteneur Central */
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#center h1 {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--text-h);
+}
+
+/* 4. Section Prochaines Étapes (Grid moderne) */
+#next-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  border-top: 1px solid var(--border);
+  background: var(--white);
+  gap: 0;
+}
+
+#next-steps > div {
+  padding: 48px;
+  transition: var(--transition);
+}
+
+#next-steps > div:hover {
+  background: var(--social-bg);
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+}
+
+/* 5. Boutons Sociaux / Liens */
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+#next-steps a {
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 12px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  display: flex;
+  padding: 12px 20px;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+#next-steps a:hover {
+  background: var(--white);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--shadow-premium);
+  transform: translateY(-3px);
+}
+
+/* 6. Décorations & Spacers */
+.ticks {
+  position: relative;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+
+#spacer {
+  height: 100px;
+  background: linear-gradient(to bottom, var(--white), var(--social-bg));
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-15deg); }
+  50% { transform: translateY(-15px) rotate(-10deg); }
+}
+
+/* Responsivité Mobile */
+@media (max-width: 1024px) {
+  #next-steps {
+    grid-template-columns: 1fr;
+  }
+  
+  #docs {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #next-steps ul li {
+    flex: 1 1 100%;
+  }
+}
