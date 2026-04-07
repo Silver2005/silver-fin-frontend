@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+// IMPORTATION CRITIQUE : On utilise ton instance configurée dans src/api/axios.js
+import api from '../api/axios'; 
 
 const Login = ({ setToken, setUser, togglePage }) => {
     const [email, setEmail] = useState('');
@@ -16,32 +17,40 @@ const Login = ({ setToken, setUser, togglePage }) => {
         setIsLoading(true);
 
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/login', {
+            // MODIFICATION : On appelle '/login'. 
+            // Ton instance 'api' ajoutera automatiquement l'URL de Render ou de localhost.
+            const response = await api.post('/login', {
                 email,
                 password
             });
 
-            // DEBUG : Utile pour vérifier la structure (token, user, role)
+            // DEBUG : Vérification de la structure en console
             console.log("Réponse Backend :", response.data);
 
             // 1. Stockage persistant du token
             localStorage.setItem('token', response.data.token);
             
-            // 2. Mise à jour de l'état utilisateur (pour le contexte global)
+            // 2. Mise à jour de l'état utilisateur
             if (response.data.user) {
                 setUser(response.data.user);
-                // Optionnel : stocker l'utilisateur si nécessaire au rafraîchissement
-                // localStorage.setItem('user', JSON.stringify(response.data.user));
             }
             
             // 3. Déclenchement du changement d'interface dans App.js
-            // On le fait en dernier pour s'assurer que les données sont prêtes
             setToken(response.data.token);
 
         } catch (err) {
             console.error("Erreur login:", err);
-            // Gestion d'erreur plus précise selon la réponse du serveur
-            const message = err.response?.data?.message || "Email ou mot de passe incorrect.";
+            
+            // Gestion d'erreur améliorée
+            let message = "Impossible de contacter le serveur.";
+            if (err.response) {
+                // Le serveur a répondu avec un code d'erreur (401, 422, etc.)
+                message = err.response.data.message || "Email ou mot de passe incorrect.";
+            } else if (err.request) {
+                // La requête a été envoyée mais pas de réponse (Problème de connexion/CORS)
+                message = "Le serveur ne répond pas. Vérifie ta connexion ou les réglages CORS.";
+            }
+            
             setError(message);
         } finally {
             setIsLoading(false);

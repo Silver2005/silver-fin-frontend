@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+// IMPORTATION CRITIQUE : Utilise ton instance configurée
+import api from '../api/axios'; 
 
 const Reports = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchAll = async () => {
-        const token = localStorage.getItem('token');
         try {
-            const response = await axios.get('http://127.0.0.1:8000/api/transactions/', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const sorted = response.data.sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
+            // Utilisation de l'instance 'api' : l'URL de Render et le Token sont gérés automatiquement
+            const response = await api.get('/transactions/');
+            
+            // Tri par date (plus récent au plus ancien)
+            const sorted = response.data.sort((a, b) => 
+                new Date(b.transaction_date) - new Date(a.transaction_date)
+            );
             setTransactions(sorted);
         } catch (error) {
-            console.error("Erreur rapports:", error);
+            console.error("Erreur lors de la récupération des rapports:", error);
         } finally {
             setLoading(false);
         }
@@ -26,12 +29,12 @@ const Reports = () => {
 
     // --- LOGIQUE DES CONSEILS INTELLIGENTS ---
     const getSmartAdvice = () => {
-        const totalRev = transactions.reduce((acc, t) => t.type === 'revenu' ? acc + parseFloat(t.amount) : acc, 0);
-        const totalExp = transactions.reduce((acc, t) => t.type === 'depense' ? acc + parseFloat(t.amount) : acc, 0);
+        if (transactions.length === 0) return null;
+
+        const totalRev = transactions.reduce((acc, t) => t.type === 'revenu' ? acc + parseFloat(t.amount || 0) : acc, 0);
+        const totalExp = transactions.reduce((acc, t) => t.type === 'depense' ? acc + parseFloat(t.amount || 0) : acc, 0);
         const balance = totalRev - totalExp;
         const ratio = totalRev > 0 ? (totalExp / totalRev) * 100 : 0;
-
-        if (transactions.length === 0) return null;
 
         if (balance < 0) {
             return {
@@ -57,10 +60,15 @@ const Reports = () => {
     const advice = getSmartAdvice();
     const handlePrint = () => window.print();
 
-    if (loading) return <div className="p-20 text-center font-black text-gray-300 animate-pulse uppercase">Analyse des finances...</div>;
+    // Calcul de la balance finale pour le footer du tableau
+    const finalBalance = transactions.reduce((acc, t) => 
+        t.type === 'revenu' ? acc + parseFloat(t.amount || 0) : acc - parseFloat(t.amount || 0), 0
+    );
+
+    if (loading) return <div className="p-20 text-center font-black text-gray-300 animate-pulse uppercase tracking-widest">Analyse des finances...</div>;
 
     return (
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-6 animate-fadeIn font-sans">
             
             {/* ACTIONS - MASQUÉES À L'IMPRESSION */}
             <div className="flex justify-end print:hidden">
@@ -82,7 +90,7 @@ const Reports = () => {
                             SILVER <span className="text-blue-600">FIN</span>
                         </h1>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-2">
-                            Système de Gestion Financière • 
+                            Système de Gestion Financière • {new Date().getFullYear()}
                         </p>
                     </div>
                     <div className="text-right">
@@ -91,7 +99,7 @@ const Reports = () => {
                     </div>
                 </div>
 
-                {/* --- BLOC CONSEILS INTELLIGENTS (Visible seulement sur l'écran) --- */}
+                {/* BLOC CONSEILS INTELLIGENTS */}
                 {advice && (
                     <div className={`p-6 rounded-3xl border mb-10 print:hidden ${advice.color} transition-all duration-500 shadow-sm`}>
                         <div className="flex items-center gap-3 mb-2">
@@ -115,7 +123,7 @@ const Reports = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {transactions.length > 0 ? transactions.map((t) => (
-                                <tr key={t.id}>
+                                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="py-4 px-4 text-[11px] font-bold text-slate-500 border-x border-slate-50 print:border-slate-100">
                                         {new Date(t.transaction_date).toLocaleDateString()}
                                     </td>
@@ -143,7 +151,7 @@ const Reports = () => {
                             <tr className="bg-slate-900 text-white">
                                 <td colSpan="3" className="py-4 px-4 text-[10px] font-black uppercase text-right tracking-widest">Balance Finale</td>
                                 <td className="py-4 px-4 text-sm font-black text-right">
-                                    {transactions.reduce((acc, t) => t.type === 'revenu' ? acc + parseFloat(t.amount) : acc - parseFloat(t.amount), 0).toLocaleString()} F
+                                    {finalBalance.toLocaleString()} F
                                 </td>
                             </tr>
                         </tfoot>
